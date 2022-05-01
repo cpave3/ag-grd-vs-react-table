@@ -18,13 +18,7 @@ export const ReactTable = () => {
 
     const tableInstance = useTable({ columns, data })
 
-    const {
-        getTableProps,
-        getTableBodyProps,
-        headerGroups,
-        rows,
-        prepareRow,
-    } = tableInstance
+    const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow, } = tableInstance
 
     return (
         <table {...getTableProps()}>

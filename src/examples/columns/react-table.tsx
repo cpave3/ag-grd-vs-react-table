@@ -1,92 +1,125 @@
 import * as React from 'react';
-import { useTable } from 'react-table';
-export const Grid = () => {
-    const data = React.useMemo(
-        () => [
-            {
-                col1: 'Hello',
-                col2: 'World',
+import { useSortBy, useTable, useAsyncDebounce, useFilters } from 'react-table';
+import { matchSorter } from 'match-sorter'
+
+// Define a default UI for filtering
+function DefaultColumnFilter({
+    column: { filterValue, preFilteredRows, setFilter },
+}) {
+    const count = preFilteredRows.length
+
+    return (
+        <input
+            value={filterValue || ''}
+            onChange={e => {
+                setFilter(e.target.value || undefined) // Set undefined to remove the filter entirely
+            }}
+            placeholder={`Search ${count} records...`}
+        />
+    )
+}
+
+function fuzzyTextFilterFn(rows, id, filterValue) {
+    return matchSorter(rows, filterValue, { keys: [row => row.values[id]] })
+}
+
+// Let the table remove the filter if the string is empty
+fuzzyTextFilterFn.autoRemove = val => !val
+
+export const ReactTable = () => {
+
+    const filterTypes = React.useMemo(
+        () => ({
+            // Add a new fuzzyTextFilterFn filter type.
+            fuzzyText: fuzzyTextFilterFn,
+            // Or, override the default text filter to use
+            // "startWith"
+            text: (rows, id, filterValue) => {
+                return rows.filter(row => {
+                    const rowValue = row.values[id]
+                    return rowValue !== undefined
+                        ? String(rowValue)
+                            .toLowerCase()
+                            .startsWith(String(filterValue).toLowerCase())
+                        : true
+                })
             },
-            {
-                col1: 'react-table',
-                col2: 'rocks',
-            },
-            {
-                col1: 'whatever',
-                col2: 'you want',
-            },
-        ],
+        }),
         []
+    )
+
+    const data = React.useMemo<Record<string, string>[]>(
+        () => [
+            { col1: 'hello', col2: 'world' },
+            { col1: 'react-table', col2: 'rocks' },
+            { col1: 'whatever', col2: 'you want' },
+        ], []
     )
 
     const columns = React.useMemo(
         () => [
-            {
-                Header: 'Column 1',
-                accessor: 'col1' as "col1", // accessor is the "key" in the data
-            },
-            {
-                Header: 'Column 2',
-                accessor: 'col2' as "col2",
-            },
-        ],
+            { Header: 'Column 1', accessor: 'col1', filter: 'fuzzytext' },
+            { Header: 'Column 2', accessor: 'col2', filter: 'fuzzytext' },
+        ], []
+    )
+
+    const defaultColumn = React.useMemo(
+        () => ({
+            // Let's set up our default Filter UI
+            Filter: DefaultColumnFilter,
+        }),
         []
     )
 
-    const tableInstance = useTable({ columns, data })
 
-    const {
-        getTableProps,
-        getTableBodyProps,
-        headerGroups,
-        rows,
-        prepareRow,
-    } = tableInstance
+    const tableInstance = useTable({ columns, data, defaultColumn, filterTypes }, useFilters, useSortBy)
+
+    const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow, visibleColumns } = tableInstance
 
     return (
-        // apply the table props
         <table {...getTableProps()}>
             <thead>
-                {// Loop over the header rows
-                    headerGroups.map(headerGroup => (
-                        // Apply the header row props
-                        <tr {...headerGroup.getHeaderGroupProps()}>
-                            {// Loop over the headers in each row
-                                headerGroup.headers.map(column => (
-                                    // Apply the header cell props
-                                    <th {...column.getHeaderProps()}>
-                                        {// Render the header
-                                            column.render('Header')}
-                                    </th>
-                                ))}
-                        </tr>
-                    ))}
+                {headerGroups.map(headerGroup => (
+                    <tr {...headerGroup.getHeaderGroupProps()}>
+                        {headerGroup.headers.map(column => (
+                            // For sorting, you need to add this function call below
+                            <th {...column.getHeaderProps(column.getSortByToggleProps())}>
+                                <div>
+
+                                    {column.render('Header')}
+                                    {/* Add a sort direction indicator */}
+                                    <span>
+                                        {column.isSorted
+                                            ? column.isSortedDesc
+                                                ? ' 🔽'
+                                                : ' 🔼'
+                                            : ''}
+                                    </span>
+                                </div>
+                                {/* Render the columns filter UI */}
+                                <div>{column.canFilter ? column.render('Filter') : null}</div>
+                            </th>
+                        ))}
+                    </tr>
+                ))}
+
             </thead>
-            {/* Apply the table body props */}
             <tbody {...getTableBodyProps()}>
-                {// Loop over the table rows
+                {
                     rows.map(row => {
-                        // Prepare the row for display
                         prepareRow(row)
                         return (
-                            // Apply the row props
                             <tr {...row.getRowProps()}>
-                                {// Loop over the rows cells
-                                    row.cells.map(cell => {
-                                        // Apply the cell props
-                                        return (
-                                            <td {...cell.getCellProps()}>
-                                                {// Render the cell contents
-                                                    cell.render('Cell')}
-                                            </td>
-                                        )
-                                    })}
+                                {row.cells.map(cell => {
+                                    return (<td {...cell.getCellProps()}>
+                                        {cell.render('Cell')}
+                                    </td>
+                                    )
+                                })}
                             </tr>
                         )
                     })}
             </tbody>
         </table>
     )
-
-
 }
