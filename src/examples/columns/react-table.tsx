@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useSortBy, useTable, useAsyncDebounce, useFilters } from 'react-table';
+import { useSortBy, useTable, useFilters } from 'react-table';
 import { matchSorter } from 'match-sorter'
 
 // Define a default UI for filtering
@@ -74,7 +74,7 @@ export const ReactTable = () => {
 
     const tableInstance = useTable({ columns, data, defaultColumn, filterTypes }, useFilters, useSortBy)
 
-    const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow, visibleColumns } = tableInstance
+    const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } = tableInstance
 
     return (
         <table {...getTableProps()}>
